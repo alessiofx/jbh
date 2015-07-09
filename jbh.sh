@@ -1,7 +1,7 @@
 #/bin/bash
 #----------------------------------------
 # JBH - Jekyll Blog Helper
-_version="1.2.0"
+_version="1.3.0"
 # http://github.com/alanbarber/jbh
 #----------------------------------------
 # Settings
@@ -45,6 +45,14 @@ function fnGetAssetDirectoryFromDateAndTitle {
 		echo ""
 	fi
 }
+function fnGetDateFromFileName {
+	local _date=$(echo $1 | sed -e 's/(\d{4}-\d{1,2}-\d{1,2})/')
+	return "$_date"
+}
+function fnGetTitleFromFileName {
+	local _title=$(echo $1 | sed -e 's/\d{4}-\d{1,2}-\d{1,2}-([\w-]+).md/')
+	return "_$title"
+}
 # Feature Functions
 # Version
 function fnVersion {
@@ -67,6 +75,7 @@ function fnHelpInfo {
 	echo "  -n, --new      creates a new post or draft"
 	echo "  -p, --publish  copies site via rcp/rsync to remote server"
 	echo "  -s, --serve    runs the jekyll server"
+	echo "  -u, --update   updates title or date of a post"
 	echo "  -v, --version  displays version of the script"
 	echo ""
 	echo "Modifiers:"
@@ -83,6 +92,10 @@ function fnHelpInfo {
 	echo "    -p, --post   moves a post to draft"
 	echo "  --serve:"
 	echo "    -d, --draft  includes draft in jekyll server"
+	echo "  -update:"
+	echo "    -d, --draft  indicated you are updating a draft"
+	echo "        --date   updates date of a given post"
+	echo "        --title  updates title of a given post"
 	echo ""
 	echo "Examples:"
 	echo ""
@@ -107,6 +120,12 @@ function fnHelpInfo {
 	echo ""
 	echo "  jbh.sh --move --draft \"2015-01-01-blog-title.md\""
 	echo "    Moves the matching file from draft to post folder"
+	echo ""
+	echo "  jbh.sh --update \"2015-01-01-blog-title.md\" --date \"2/1/2015\" "
+	echo "  jbh.sh --update \"2015-01-01-blog-title.md\" --title \"new title\" "
+	echo "    Updates the given post's data. This is a distructive process that"
+	echo "    will rename the file, update values inside the header, and move"
+	echo "    any assets folders to match. You can only update one value at a time."
 	echo ""
 	echo "Report bugs to <github.com/alanbarber/jbh>"
 	echo ""
@@ -243,6 +262,10 @@ function fnServe {
 		jekyll serve --destination ".$_sitePath"
 	fi
 }
+# Update
+function fnUpdate {
+
+}
 # Process command line# Parse options
 case "$1" in
 	-b)
@@ -292,6 +315,12 @@ case "$1" in
 		;;
 	--server)
 		fnServe "$2"
+		;;
+	-u)
+		fnUpdate "$2" "$3" "$4" "$5"
+		;;
+	--update)
+		fnUpdate "$2" "$3" "$4" "$5"
 		;;
 	-v)
 		fnVersion
