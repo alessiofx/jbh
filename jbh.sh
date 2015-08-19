@@ -1,28 +1,41 @@
 #/bin/bash
 #----------------------------------------
 # JBH - Jekyll Blog Helper
-_version="1.3.0"
+# A bash shell script tool to management
+# Jekyll blog sites.
+# For more information please visit
 # http://github.com/alanbarber/jbh
 #----------------------------------------
 # Settings
-# Note: Always set leading and trailing slashes in path! Paths are relative.
+# Notes: Always set leading and trailing slashes in path
+#        Paths are relative to the jekyll directory
 
 _sitePath="/_site/"	
 _postPath="/_posts/"
 _draftPath="/_drafts/"
+_templatePath="/_templates/"
 _assetPath="/assets/"
 
 _excerptSeparator="/--more--/"
 
 # Remote Server Settings
-_publishUseRsync="true"
+# Notes: Paths should be fully qualified
+_remoteUseRsync="true"
+
 _publishUser="username"
 _publishServer="server.tld"
 _publishPath="/home/username/public_html/"
 
+_stageUser="username"
+_stageServer="server.tld"
+_stagePath="/home/username/public_html_stage/"
+
 ########################################
 # DO NOT EDIT BELOW THIS LINE
 ########################################
+# Current Version Of Script
+_version="1.3.0 beta"
+
 # Helper Function
 function fnConvertTitleToFilenameFormat {
 	# lowercase, remove non alphanumerics and non spaces, convert spaces to dash
@@ -44,14 +57,6 @@ function fnGetAssetDirectoryFromDateAndTitle {
 	else
 		echo ""
 	fi
-}
-function fnGetDateFromFileName {
-	local _date=$(echo $1 | sed -e 's/(\d{4}-\d{1,2}-\d{1,2})/')
-	return "$_date"
-}
-function fnGetTitleFromFileName {
-	local _title=$(echo $1 | sed -e 's/\d{4}-\d{1,2}-\d{1,2}-([\w-]+).md/')
-	return "_$title"
 }
 # Feature Functions
 # Version
@@ -75,27 +80,30 @@ function fnHelpInfo {
 	echo "  -n, --new      creates a new post or draft"
 	echo "  -p, --publish  copies site via rcp/rsync to remote server"
 	echo "  -s, --serve    runs the jekyll server"
-	echo "  -u, --update   updates title or date of a post"
+	echo "  -u, --update   update title or date of a post"	
 	echo "  -v, --version  displays version of the script"
 	echo ""
 	echo "Modifiers:"
 	echo ""
 	echo "  --build:"
-	echo "    -d, --draft  includes drafts in jekyll build"
+	echo "    -d, --draft    includes drafts in jekyll build"
 	echo "  --list:"
-	echo "    -d, --draft  lists draft posts"
-	echo "    -p, --post   lists posts"
+	echo "    -d, --draft    lists draft posts"
+	echo "    -p, --post     lists posts"
 	echo "  --new:"
-	echo "    -d, --draft  creates a new draft post"
+	echo "    -d, --draft    creates a new draft post"
+	echo "    -t, --template specifies a template to use to create the post"
 	echo "  --move:"
-	echo "    -d, --draft  moves a draft to post"
-	echo "    -p, --post   moves a post to draft"
+	echo "    -d, --draft    moves a draft to post"
+	echo "    -p, --post     moves a post to draft"
+	echo "  --publish:"
+	echo "    -s, --stage    copies site to staging folder on remote server"
 	echo "  --serve:"
-	echo "    -d, --draft  includes draft in jekyll server"
-	echo "  -update:"
-	echo "    -d, --draft  indicated you are updating a draft"
-	echo "        --date   updates date of a given post"
-	echo "        --title  updates title of a given post"
+	echo "    -d, --draft    includes draft in jekyll server"
+	echo "  --update:"	
+	echo "    -d, --draft    indicates you are updating a draft"
+	echo "        --date     updates date of a post specified"
+	echo "        --title    updates title of post specified"
 	echo ""
 	echo "Examples:"
 	echo ""
@@ -104,6 +112,9 @@ function fnHelpInfo {
 	echo ""
 	echo "  jbh.sh --new \"Blog title\" \"1/1/2015\""
 	echo "    Create a new post on a specific date"
+	echo ""
+	echo "  jbh.sh --new \"Blog title\" --template \"template-name\""
+	echo "    Creates a new post witht he given title using a custom template"
 	echo ""
 	echo "  jbh.sh --new --draft \"Blog title\""
 	echo "    Creates a new draft post with the given title"
@@ -115,6 +126,12 @@ function fnHelpInfo {
 	echo "    Runs rcp/rsync to copy built site to a remote server"
 	echo "    * NOTE: Server settings are stored at top of script"
 	echo ""
+	echo "  jbh.sh --publish --stage \"1/1/2015\""
+	echo "    Runs rcp/rsync to copy built site to a stage folder for the specified"
+	echo "    date on remote server"
+	echo "    * NOTE: Server settings are stored at top of script"
+	echo "    * NOTE: This command is designed to work with companion JBHCron.sh script"
+	echo ""
 	echo "  jbh.sh --list \"*2015*\""
 	echo "    Lists all posts that have '2015' in the file name"
 	echo ""
@@ -123,10 +140,10 @@ function fnHelpInfo {
 	echo ""
 	echo "  jbh.sh --update \"2015-01-01-blog-title.md\" --date \"2/1/2015\" "
 	echo "  jbh.sh --update \"2015-01-01-blog-title.md\" --title \"new title\" "
-	echo "    Updates the given post's data. This is a distructive process that"
+	echo "    Updates the given post's data. This is a destructive process that"
 	echo "    will rename the file, update values inside the header, and move"
 	echo "    any assets folders to match. You can only update one value at a time."
-	echo ""
+	echo ""	
 	echo "Report bugs to <github.com/alanbarber/jbh>"
 	echo ""
 }
@@ -165,8 +182,12 @@ function fnList {
 	fi
 	ls -Ax1 .$_listPath$_listSearch
 } 
+# Move Draft
+function fnMoveDraft {
+
+}
 # Move Posts
-function fnMove {
+function fnMovePost {
 	local _moveFile="$2"
 	if [[ ("$1" == "-d" || "$1" == "--draft") && "$_moveFile" != "" ]]; then
 		echo "Moving draft to post..."
@@ -190,8 +211,12 @@ function fnMove {
 		exit 1
 	fi
 }
+# New Draft
+function fnNewDraft {
+
+}
 # New Post
-function fnNew {
+function fnNewPost {
 	echo "Creating new post..."
 	if [[ "$1" == "-d" || "$1" == "--draft" ]]; then
 		echo "  Making post a draft..."
@@ -239,18 +264,45 @@ function fnNew {
 # Publish
 function fnPublish {
 	echo "Publishing site to remote server..."
-	# call rsync using settings	
+	# Verify settings
 	if [[ "$_publishPath" == "" || "$_publishUser" == "" || "$_publishServer" == "" ]]; then
 		echo "  Error: Unable to determine settings to publish to remote server!"
 		echo ""
 		exit 1
 	else
-		if [[ "$_publishUseRsync" == "" || "$_publishUseRsync" == "0" || "$_publishUseRsync" == "false" ]]; then
-			scp -r .$_sitePath* $_publishUser@$_publishServer:$_publishPath
+		if [[ "$_remoteUseRsync" == "true" ]]; then
+			echo "Using rsync..."
+			rsync --compress --recursive --checksum --itemize-changes --delete .$_sitePath $_publishUser@$_publishServer:$_publishPath
 		else
-			rsync --compress --recursive --checksum --itemize-changes --delete .$_sitePate* $_publishUser@$_publishServer:$_publishPath
+			echo "Using scp..."
+			scp -C -r .$_sitePath* $_publishUser@$_publishServer:$_publishPath
 		fi
 	fi
+}
+# Stage
+function fnStage {
+	echo "Staging site to remote server..."
+	# Verify settings
+	if [[ "$_stagePath" == "" || "$_stageUser" == "" || "$_stageServer" == "" ]]; then
+		echo "  Error: Unable to determine settings to stage to remote server!"
+		echo ""
+		exit 1
+	else
+		if [[ "$1" == "" ]]; then
+			echo "ERROR: Please specify date to stage!"
+			exit 1
+		fi
+		
+		local _date=$(date -d $1 +%Y-%m-%d)
+		local _remotePath="$_publishStagePath$_date/"		
+		
+		if [[ "$_remoteUseRsync" == "true" ]]; then
+			echo "Using rsync..."
+			rsync --compress --recursive --checksum --itemize-changes --delete .$_sitePath $_publishUser@$_publishServer:$_remotePath
+		else
+			echo "Using scp..."
+			scp -C -r .$_sitePath* $_publishUser@$_publishServer:$_remotePath
+		fi
 }
 # Server
 function fnServe {
@@ -262,9 +314,37 @@ function fnServe {
 		jekyll serve --destination ".$_sitePath"
 	fi
 }
-# Update
-function fnUpdate {
+function fnUpdateDraft {
 
+}
+# Update Post
+function fnUpdatePost {
+	if [[ "$1" == "-d" || "$1" == "--draft" ]]; then
+		local _updatePostType="draft"
+		local _updateFile="$2"
+		local _updateFilePath="$_postPath$_updateFile"
+		local _updateAction="$3"
+		local _updateValue="$4"
+		local _updateCurrentAssetDir=""
+		local _updateNewAssetDir=""
+	else
+		local _updatePostType="post"
+		local _updateFile="$1"
+		local _updateFilePath="$_postPath$_updateFile"
+		local _updateAction="$2"
+		local _updateValue="$3"
+		local _updateCurrentAssetDir=""
+		local _updateNewAssetDir=""
+	fi
+
+	#
+	if [[ "$_updateFile" != "" && -e ".$_updateFilePath" ]]; then
+	
+	else
+		echo "  Error: unable to find $_updatePostType '$_updateFile'"
+		echo ""
+		exit 1
+	fi	
 }
 # Process command line# Parse options
 case "$1" in
@@ -296,16 +376,24 @@ case "$1" in
 		fnMove "$2" "$3"
 		;;
 	-n)
-		fnNew "$2" "$3" "$4"
+		fnNew "$2" "$3" "$4" "$5" "$6"
 		;;
 	--new)
-		fnNew "$2" "$3" "$4"
+		fnNew "$2" "$3" "$4" "$5" "$6"
 		;;
 	-p)
-		fnPublish
+		if [[ "$2" == "-s" || "$2" == "--stage" ]]; then
+			fnStage "$3"
+		else
+			fnPublish
+		fi
 		;;
 	--publish)
-		fnPublish
+		if [[ "$2" == "-s" || "$2" == "--stage" ]]; then
+			fnStage "$3"
+		else
+			fnPublish
+		fi
 		;;
 	-s)
 		fnServe "$2"
@@ -321,7 +409,7 @@ case "$1" in
 		;;
 	--update)
 		fnUpdate "$2" "$3" "$4" "$5"
-		;;
+		;;		
 	-v)
 		fnVersion
 		;;

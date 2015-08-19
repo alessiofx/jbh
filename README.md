@@ -1,4 +1,9 @@
-# jbh
+[![GitHub release](https://img.shields.io/github/release/alanbarber/jbh.svg)](#)
+[![Github Releases](https://img.shields.io/github/downloads/alanbarber/jbh/latest/total.svg)](#)
+[![GitHub issues](https://img.shields.io/github/issues/alanbarber/jbh.svg)](#)
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/AlanBarber/jbh?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
+# jbh.sh
 (JBH) Jekyll Blog Helper - A bash shell script to help manage a Jekyll weblog
 site
 
@@ -17,6 +22,7 @@ within a Jekyll managed blog.
 	  -n, --new      creates a new post
 	  -p, --publish  copies site via rcp/rsync to remote server
 	  -s, --serve    runs the jekyll server
+      -u, --update   update title or date of a post
 	  -v, --version  displays version of the script
 	
 	Modifiers:
@@ -28,11 +34,16 @@ within a Jekyll managed blog.
 	    -p, --post   lists posts
 	  --new:
 	    -d, --draft  creates a new draft post
+        -t, --template specifies a template to use to create the post
 	  --move:
 	    -d, --draft  moves a draft to post
 	    -p, --post   moves a post to draft
 	  --serve:
 	    -d, --draft  includes draft in jekyll server
+      --update:"	
+        -d, --draft    indicates you are updating a draft
+        --date     updates date of a post specified
+        --title    updates title of post specified
 
 	Examples:
 	
@@ -41,6 +52,9 @@ within a Jekyll managed blog.
 	
 	  jbh.sh --new "Blog title" "1/1/2015"
 	    Create a new post on a specific date
+
+      jbh.sh --new "Blog title" --template "template-name"
+        Creates a new post witht he given title using a custom template
 	
 	  jbh.sh --new --draft "Blog title"
 	    Creates a new draft post with the given title
@@ -51,12 +65,24 @@ within a Jekyll managed blog.
 	  jbh.sh --publish
 	    Runs rcp/rsync to copy built site to a remote server
 	    * NOTE: Server settings are stored at top of script
+
+      jbh.sh --publish --stage "1/1/2015"
+        Runs rcp/rsync to copy built site to a stage folder for the specified
+        date on remote server
+        * NOTE: Server settings are stored at top of script
+        * NOTE: This command is designed to work with companion JBHCron.sh script
 	
 	  jbh.sh --list "*2015*"
 	    Lists all posts that have '2015' in the file name
 	
 	  jbh.sh --move --draft "2015-01-01-blog-title.md"
 	    Moves the matching file from draft to post folder
+
+      jbh.sh --update "2015-01-01-blog-title.md" --date "2/1/2015"
+      jbh.sh --update "2015-01-01-blog-title.md" --title "new title"
+        Updates the given post's data. This is a distructive process that
+        will rename the file, update values inside the header, and move
+        any assets folders to match. You can only update one value at a time.
 ````
 
 ## Install
@@ -145,6 +171,21 @@ If you need remove a published post you can also use the move command to do this
 
 This will move the matching post file from the post folder to the draft folder.
 
+### Updating Title or Date of Posts & Drafts 
+
+The update command allows you to change the title or date of an existing post.
+
+````
+    $ jbh.sh --update "2015-01-01-blog-title.md" --date "2/1/2015"
+````
+
+````
+	$ jbh.sh --update "2015-01-01-blog-title.md" --title "New title"
+````
+
+This is a destructive process that will edit the post file contents, change the
+filename and move any contents in asset directories to new locations.
+
 ### Build The Site
 
 ````
@@ -175,7 +216,7 @@ This pushes the changes via scp or rsync to your remote server
 
 ## Compatibility / Reporting Bugs & Issues
 
-JBH is developed and tested on Windows 8 using Git Bash from an install of Git
+JBH is developed and tested on Windows 10 using Git Bash from an install of Git
 1.9.5
 
 It has not be tested on other platforms. 
