@@ -36,7 +36,7 @@ _stagePath="/home/username/public_html_stage/"
 # Current Version Of Script
 _version="1.3.0 beta"
 
-# Helper Function
+# Helper Functions
 function fnConvertTitleToFilenameFormat {
 	# lowercase, remove non alphanumerics and non spaces, convert spaces to dash
 	local _title=$(echo $1 | sed -e 's/\(.*\)/\L\1/')
@@ -44,16 +44,36 @@ function fnConvertTitleToFilenameFormat {
 	_title=$(echo $_title | sed -e 's/\s/-/g')
 	echo "$_title"
 }
-function fnGetFileNameFromDateAndTitle { 
+function fnGetFileNameFromDateAndTitle {
 	local _title=$(fnConvertTitleToFilenameFormat "$2")
 	local _date=$(date -d "$1" +%Y-%m-%d)
 	echo "$_date-$_title.md"
-
+}
+function fnGetDateFromFilename {
+	local _date=$(echo $1 | sed -e 's/\([0-9]\{4\}-[0-9]\{1,2\}-[0-9]\{1,2\}\)-\(.*\)\.\(.*\)/\1/')
+	echo "$_date"
+}
+function fnGetTitleFromFilename {
+	local _title=$(echo $1 | sed -e 's/\([0-9]\{4\}-[0-9]\{1,2\}-[0-9]\{1,2\}\)-\(.*\)\.\(.*\)/\2/')
+	echo "$_title"
+}
+function fnGetExtensionFromFilename {
+	local _extension=$(echo $1 | sed -e 's/\([0-9]\{4\}-[0-9]\{1,2\}-[0-9]\{1,2\}\)-\(.*\)\.\(.*\)/\3/')
+	echo "$_extension"
 }
 function fnGetAssetDirectoryFromDateAndTitle {
 	if [[ "$_assetPath" != "" ]]; then
 		local _title=$(fnConvertTitleToFilenameFormat "$2")
 		echo "$_assetPath$(date -d $1 +%Y)/$(date -d $1 +%m)/$(date -d $1 +%d)/$_title"
+	else
+		echo ""
+	fi
+}
+function fnGetAssetDirectoryFromFilename {
+	if [[ "$_assetPath" != "" ]]; then
+		local _date=$(fnGetDateFromFilename "$1")
+		local _title=$(fnGetTitleFromFilename "$1")
+		echo "$_assetPath$(date -d $_date +%Y)/$(date -d $_date +%m)/$(date -d $_date +%d)/$_title"
 	else
 		echo ""
 	fi
@@ -90,6 +110,7 @@ function fnHelpInfo {
 	echo "  --list:"
 	echo "    -d, --draft    lists draft posts"
 	echo "    -p, --post     lists posts"
+	echo "    -t, --template lists templates"
 	echo "  --new:"
 	echo "    -d, --draft    creates a new draft post"
 	echo "    -t, --template specifies a template to use to create the post"
@@ -138,9 +159,9 @@ function fnHelpInfo {
 	echo "  jbh.sh --move --draft \"2015-01-01-blog-title.md\""
 	echo "    Moves the matching file from draft to post folder"
 	echo ""
-	echo "  jbh.sh --update \"2015-01-01-blog-title.md\" --date \"2/1/2015\" "
-	echo "  jbh.sh --update \"2015-01-01-blog-title.md\" --title \"new title\" "
-	echo "    Updates the given post's data. This is a destructive process that"
+	echo "  jbh.sh --update \"2015-01-01-blog-title.md\" --date \"2/1/2015\""
+	echo "  jbh.sh --update \"2015-01-01-blog-title.md\" --title \"new title\""
+	echo "    Updates the given post data. This is a destructive process that"
 	echo "    will rename the file, update values inside the header, and move"
 	echo "    any assets folders to match. You can only update one value at a time."
 	echo ""	
@@ -175,6 +196,10 @@ function fnList {
 		echo "Listing posts..."
 		local _listPath="$_postPath"
 		local _listSearch="$2"		
+	elif [[ "$1" == "-t" || "$1" == "--template" ]]; then
+		echo "Listing templates..."
+		local _listPath="$_templatePath"
+		local _listSearch="$2"
 	else
 		echo "Listing posts..."
 		local _listPath="$_postPath"
@@ -184,7 +209,7 @@ function fnList {
 } 
 # Move Draft
 function fnMoveDraft {
-
+	echo ""
 }
 # Move Posts
 function fnMovePost {
@@ -213,7 +238,7 @@ function fnMovePost {
 }
 # New Draft
 function fnNewDraft {
-
+	echo ""
 }
 # New Post
 function fnNewPost {
@@ -292,10 +317,10 @@ function fnStage {
 			echo "ERROR: Please specify date to stage!"
 			exit 1
 		fi
-		
+
 		local _date=$(date -d $1 +%Y-%m-%d)
 		local _remotePath="$_publishStagePath$_date/"		
-		
+
 		if [[ "$_remoteUseRsync" == "true" ]]; then
 			echo "Using rsync..."
 			rsync --compress --recursive --checksum --itemize-changes --delete .$_sitePath $_publishUser@$_publishServer:$_remotePath
@@ -303,6 +328,7 @@ function fnStage {
 			echo "Using scp..."
 			scp -C -r .$_sitePath* $_publishUser@$_publishServer:$_remotePath
 		fi
+	fi
 }
 # Server
 function fnServe {
@@ -314,15 +340,17 @@ function fnServe {
 		jekyll serve --destination ".$_sitePath"
 	fi
 }
+# Update Draft
 function fnUpdateDraft {
-
+	echo ""
 }
 # Update Post
 function fnUpdatePost {
+	echo "Updating post..."
 	if [[ "$1" == "-d" || "$1" == "--draft" ]]; then
 		local _updatePostType="draft"
 		local _updateFile="$2"
-		local _updateFilePath="$_postPath$_updateFile"
+		local _updateFilePath="$_draftPath$_updateFile"
 		local _updateAction="$3"
 		local _updateValue="$4"
 		local _updateCurrentAssetDir=""
@@ -339,7 +367,7 @@ function fnUpdatePost {
 
 	#
 	if [[ "$_updateFile" != "" && -e ".$_updateFilePath" ]]; then
-	
+		echo ""
 	else
 		echo "  Error: unable to find $_updatePostType '$_updateFile'"
 		echo ""
